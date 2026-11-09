@@ -6,8 +6,9 @@
 
 A Claude Code Stop hook that won't let the agent end its turn while the diff or transcript shows concrete evidence of unfinished work. Pure code: **zero LLM calls, zero extra tokens**, under a second.
 
-<!-- GIF placeholder: record examples/run_demo.py or a live session and save it as assets/demo.gif -->
-![demo](assets/demo.gif)
+![Three "All done!" turns blocked with one specific reason each, one honest turn allowed](assets/demo.gif)
+
+<sub>The real output of <a href="examples/run_demo.py"><code>examples/run_demo.py</code></a> (real hook, real git repos, real-format transcripts), rendered by <a href="tools/make_demo_gif.py"><code>tools/make_demo_gif.py</code></a> with ffmpeg. Nothing is edited.</sub>
 
 </div>
 
@@ -179,6 +180,8 @@ Then add this to `~/.claude/settings.json` (all projects) or `.claude/settings.j
   }
 }
 ```
+**Verified:** the plugin was installed from this GitHub repo into a fresh project with `claude plugin install honest-done@honest-done --scope project`, then exercised in live `claude -p` sessions: the snapshot hook ran on every prompt, and the Stop hook allowed the turns where Claude honestly said it had not run the tests.
+
 `bin/honest-done` picks `python3`, `python` or `py`, whichever is a working Python 3.8+. On Windows, Claude Code runs hooks through Git Bash, so the same line works. The `UserPromptSubmit` hook is optional but recommended: without it, the diff is measured from `HEAD`.
 
 ## Try it in 30 seconds
@@ -243,9 +246,10 @@ honest-done also does that (`unverified_claims`), and adds what a claim checker 
 python -m unittest discover -s tests   # hook protocol, loop guard, config, CLI, the bench itself
 python bench/make_cases.py             # regenerate bench/cases from their compact definitions
 python bench/real_history.py https://github.com/psf/requests --n 40
+python tools/make_demo_gif.py          # re-render assets/demo.gif (needs pillow + ffmpeg)
 ```
 
-There are no dependencies. CI runs on Ubuntu, Windows and macOS with Python 3.8, 3.10 and 3.12.
+The hook has no dependencies (the GIF tool needs Pillow and ffmpeg). CI runs on Ubuntu, Windows and macOS with Python 3.8, 3.10 and 3.12.
 
 ## Contributing
 
