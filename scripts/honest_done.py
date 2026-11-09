@@ -149,6 +149,10 @@ def state_path(root, session_id, cwd):
     return os.path.join(state_dir(root), "state-%s.json" % key)
 
 
+def _index_path(spath):
+    return spath[:-len(".json")] + ".index"
+
+
 def load_state(path):
     try:
         with open(path, encoding="utf-8") as f:
@@ -164,27 +168,47 @@ def save_state(path, state):
     os.replace(tmp, path)
 
 
-def worktree_tree(root):
+MAX_UNTRACKED_BYTES = 2 * 1024 * 1024   # bigger untracked files are data, not code: not hashed
+
+
+def worktree_tree(root, index_path=None, excludes=None):
     """Hash the whole working tree (tracked + untracked, .gitignore respected) into a
-    git tree object without touching the user's index. Copies the real index first so
-    unchanged files are not re-hashed: fast on large repos."""
+    git tree object without touching the user's index.
+
+    A private index (index_path, kept per session in .git/honest-done/) is reused between
+    calls, so git's stat cache skips unchanged files; it is seeded from the real index the
+    first time. Untracked files over MAX_UNTRACKED_BYTES are left out: hashing a stray
+    dataset on every prompt costs seconds and bloats .git/objects."""
     gd = git_dir(root)
-    fd, tmp_index = tempfile.mkstemp(prefix="honest-done-index-")
-    os.close(fd)
+    persistent = bool(index_path)
+    if not persistent:
+        fd, index_path = tempfile.mkstemp(prefix="honest-done-index-")
+        os.close(fd)
+        os.remove(index_path)
     try:
         real = os.path.join(gd, "index")
-        if os.path.isfile(real):
-            shutil.copyfile(real, tmp_index)
-        else:
-            os.remove(tmp_index)
-        env = dict(os.environ, GIT_INDEX_FILE=tmp_index)
-        git(root, "add", "-A", "--ignore-errors", ".", env=env, check=False)
-        return git(root, "write-tree", env=env).strip()
+        if not os.path.isfile(index_path) and os.path.isfile(real):
+            shutil.copyfile(real, index_path)
+        env = dict(os.environ, GIT_INDEX_FILE=index_path)
+        if excludes is None:   # the prompt hook lists them; Stop reuses that list (one git call saved)
+            excludes = []
+            others = git(root, "-c", "core.quotepath=off", "ls-files", "-z", "--others", "--exclude-standard",
+                         env=env, check=False).split("\0")
+            for p in others:
+                try:
+                    if p and os.path.getsize(os.path.join(root, p)) > MAX_UNTRACKED_BYTES:
+                        excludes.append(p)
+                except OSError:
+                    pass
+        spec = ["."] + [":(exclude,literal)" + p for p in excludes]
+        git(root, "add", "-A", "--ignore-errors", "--", *spec, env=env, check=False)
+        return git(root, "write-tree", env=env).strip(), excludes
     finally:
-        try:
-            os.remove(tmp_index)
-        except OSError:
-            pass
+        if not persistent:
+            try:
+                os.remove(index_path)
+            except OSError:
+                pass
 
 
 def head_tree(root):
@@ -235,8 +259,8 @@ def parse_diff(text):
     return files
 
 
-def turn_diff(root, base_tree):
-    cur = worktree_tree(root)
+def turn_diff(root, base_tree, index_path=None, excludes=None):
+    cur, _ = worktree_tree(root, index_path, excludes)
     if cur == base_tree:
         return []
     out = git(root, "-c", "core.quotepath=off", "diff", "--no-color", "--no-ext-diff",
@@ -424,12 +448,12 @@ def check_unfinished(ctx):
     if ctx["turn"] and STUB_REQUESTED.search(ctx["turn"].prompt or "") and not cfg.get("strict"):
         return out      # the user asked for stubs / TODOs this turn
     for fd, ln, text in _added_code(ctx["files"], cfg):
-        s = text.strip()
-        if TODO_RE.search(text):
-            word = TODO_RE.search(text).group(1)
+        s, code = text.strip(), _code_only(text)
+        if TODO_RE.search(code):
+            word = TODO_RE.search(code).group(1)
             out.append(Finding("unfinished_code", "%s added at %s:%d (\"%s\"). Finish it or remove the marker."
                                % (word, fd.path, ln, s[:60]), fd.path, ln))
-        elif PLACEHOLDER_RE.search(text) and not is_test_path(fd.path):
+        elif PLACEHOLDER_RE.search(code) and not is_test_path(fd.path):
             out.append(Finding("unfinished_code", "placeholder comment at %s:%d (\"%s\"): the real code is missing."
                                % (fd.path, ln, s[:60]), fd.path, ln))
         elif NOT_IMPL_JS.search(text) or NOT_IMPL_OTHER.search(text):
@@ -572,14 +596,14 @@ def check_shortcuts(ctx):
 
 
 TEST_CMD = re.compile(
-    r"\b(?:pytest|py\.test|unittest|nose2|tox|nox|jest|vitest|mocha|ava|jasmine|karma|playwright\s+test|cypress\s+run"
+    r"(?:\b(?:pytest|py\.test|unittest|nose2|tox|nox|jest|vitest|mocha|ava|jasmine|karma|playwright\s+test|cypress\s+run"
     r"|go\s+test|cargo\s+(?:test|nextest)|mvnw?\b[^|;&]*\b(?:test|verify)|gradlew?\b[^|;&]*\b(?:test|check)"
     r"|rspec|minitest|phpunit|pest|dotnet\s+test|ctest|swift\s+test|mix\s+test|deno\s+test|bun\s+test"
-    r"|(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?test\b|make\s+(?:test|check)|manage\.py\s+test|rake\s+test)", re.I)
+    r"|(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?test\b|make\s+(?:test|check)|manage\.py\s+test|rake\s+test))(?![\w.-])", re.I)
 BUILD_CMD = re.compile(
-    r"\b(?:(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?build|tsc\b|cargo\s+(?:build|check)|go\s+(?:build|vet)|make\b"
+    r"(?:\b(?:(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?build|tsc\b|cargo\s+(?:build|check)|go\s+(?:build|vet)|make\b"
     r"|mvnw?\b[^|;&]*\b(?:package|install|compile|verify)|gradlew?\b[^|;&]*\b(?:build|assemble)|dotnet\s+build"
-    r"|python\s+-m\s+(?:build|compileall|py_compile)|vite\s+build|next\s+build|webpack|cmake\s+--build|swift\s+build|ninja)", re.I)
+    r"|python\s+-m\s+(?:build|compileall|py_compile)|vite\s+build|next\s+build|webpack|cmake\s+--build|swift\s+build|ninja))(?![\w.-])", re.I)
 
 NEGATION = re.compile(r"\b(?:not|n't|never|no|unable|cannot|could ?n.t|without|unverified|untested|should|would|will|may|might|"
                       r"expect|once|if|until|after you|please run|to run|you can|before|check|ensure|make sure|verify|run)\b", re.I)
@@ -606,7 +630,8 @@ def _sentences(text):
 def _claimed(text, pattern):
     for s in _sentences(text):
         m = pattern.search(s)
-        if m and not NEGATION.search(s[:m.end()] + " " + s[m.end():m.end() + 25])                 and not FAILURE_ADMITTED.search(s):
+        if m and not NEGATION.search(s[:m.end()] + " " + s[m.end():m.end() + 25]) \
+                and not FAILURE_ADMITTED.search(s):
             return s.strip()
     return None
 
@@ -787,7 +812,7 @@ def check_debug(ctx):
         if ln in comments[fd.path]:
             continue      # e.g. a console.log inside a JSDoc usage example
         hit = None
-        if DEBUG_ANY.search(text):
+        if DEBUG_ANY.search(_code_only(text)):
             hit = s
         elif SCRIPTY.search(fd.path):
             continue
@@ -831,10 +856,10 @@ def run_checks(ctx):
     return findings
 
 
-def build_context(root, cwd, base_tree, turn, cfg):
+def build_context(root, cwd, base_tree, turn, cfg, index_path=None, excludes=None):
     files = []
     if root and base_tree:
-        files = [fd for fd in turn_diff(root, base_tree) if not ignored(fd.path, cfg)]
+        files = [fd for fd in turn_diff(root, base_tree, index_path, excludes) if not ignored(fd.path, cfg)]
     return {"root": root or cwd, "files": files, "turn": turn, "cfg": cfg}
 
 
@@ -855,13 +880,14 @@ def hook_prompt(inp):
         return 0
     state = {"session": inp.get("session_id"), "prompt_id": inp.get("prompt_id"),
              "prompt": (inp.get("prompt") or "")[:20000], "time": time.time(),
-             "tree": None, "blocks": 0, "reasons": []}
+             "tree": None, "exclude": None, "blocks": 0, "reasons": []}
+    spath = state_path(root, inp.get("session_id"), cwd)
     if root:
         try:
-            state["tree"] = worktree_tree(root)
+            state["tree"], state["exclude"] = worktree_tree(root, _index_path(spath))
         except Exception:
             state["tree"] = None
-    save_state(state_path(root, inp.get("session_id"), cwd), state)
+    save_state(spath, state)
     return 0
 
 
@@ -891,7 +917,7 @@ def hook_stop(inp, out=sys.stdout):
         turn.final_text = inp["last_assistant_message"]
         if not turn.texts or turn.texts[-1] != turn.final_text:
             turn.texts.append(turn.final_text)
-    findings = run_checks(build_context(root, cwd, base, turn, cfg))
+    findings = run_checks(build_context(root, cwd, base, turn, cfg, _index_path(spath), state.get("exclude")))
     given = set(state.get("reasons", []))
     fresh = [f for f in findings if f.message not in given]
     if not fresh:
@@ -926,7 +952,11 @@ def cmd_check(args):
     base = None
     if root:
         if args.base:
-            base = git(root, "rev-parse", args.base + "^{tree}").strip()
+            try:
+                base = git(root, "rev-parse", "--verify", "-q", args.base + "^{tree}").strip()
+            except RuntimeError:
+                sys.stderr.write("honest-done: unknown revision %r\n" % args.base)
+                return 2
         else:
             base = head_tree(root)
     entries = read_transcript(args.transcript)

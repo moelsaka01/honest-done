@@ -80,7 +80,7 @@ Every check is pure code. The priority order is: silent shortcuts, unverified cl
 ```
 
 - **Zero tokens.** No model is called. Only a block adds anything to the conversation: one sentence.
-- **This turn only.** The snapshot is taken when you send the prompt. Old TODOs and your own uncommitted work are not judged. Untracked files are included and `.gitignore` is respected. Without a snapshot (first turn after install), it falls back to `HEAD`.
+- **This turn only.** The snapshot is taken when you send the prompt. Old TODOs and your own uncommitted work are not judged. Untracked files are included and `.gitignore` is respected. Untracked files over 2 MB are left out, since they are data, not code. The snapshot uses its own index file (`.git/honest-done/`), so your staging area is never touched. Without a snapshot (first turn after install), it falls back to `HEAD`.
 - **Loop-safe.** It never repeats a reason it already gave this turn. If Claude replies *"that stub is intentional"*, the next stop goes through. It also blocks at most `max_blocks` (default 2) times per turn. If its state can't be read while `stop_hook_active` is true, it allows the stop. Claude Code's own cap applies on top.
 - **Fail-open.** A crash, a broken config, missing Python or a non-git folder never blocks you. Outside git only the transcript checks run.
 - **Fast and offline.** One Python file, standard library only, Python 3.8+, no network. Four git calls per stop. Median **~0.6 s on Windows** in the bench, including Python start-up; git process spawns dominate, and they are faster on Linux and macOS.

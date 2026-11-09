@@ -161,6 +161,26 @@ class HookProtocol(unittest.TestCase):
         with open(idx, "rb") as f:
             self.assertEqual(f.read(), before)
 
+    def test_big_untracked_files_are_not_hashed(self):
+        with open(os.path.join(self.r.path, "data.bin"), "wb") as f:
+            f.write(os.urandom(hd.MAX_UNTRACKED_BYTES + 1))
+        self.r.prompt()
+        state = json.loads(load(os.path.join(self.r.path, ".git", "honest-done", "state-s1.json")))
+        names = subprocess.run(["git", "ls-tree", "--name-only", state["tree"]], cwd=self.r.path,
+                               stdout=subprocess.PIPE).stdout.decode()
+        self.assertNotIn("data.bin", names)
+        self.assertIn("calc.py", names)
+
+    def test_todo_inside_a_string_is_not_a_marker(self):
+        self.r.prompt()
+        self.r.write("calc.py", 'PAT = "# TODO: marker"\n\n\ndef add(a, b):\n    return a + b\n')
+        self.assertIsNone(self.r.stop()[0])
+
+    def test_bad_base_revision_is_a_clean_error(self):
+        code, out, err = run(["check", "--repo", self.r.path, "--base", "no-such-rev"])
+        self.assertEqual(code, 2)
+        self.assertNotIn("Traceback", err)
+
     def test_cli_check(self):
         self.r.write("calc.py", "def add(a, b):\n    breakpoint()\n    return a + b\n")
         code, out, _ = run(["check", "--repo", self.r.path])
@@ -183,6 +203,13 @@ class Unit(unittest.TestCase):
         for s in ["I did not run the tests.", "Tests should pass once you run them.", "The tests don't pass yet.",
                   "test_x now fails, so the suite is not green.", "Run `pytest` to check the tests pass."]:
             self.assertFalse(self.claim(s), s)
+
+    def test_reading_a_config_file_is_not_a_test_run(self):
+        for c in ["cat pytest.ini", "cat jest.config.js", "cat webpack.config.js"]:
+            self.assertFalse(hd.TEST_CMD.search(c) and not c.endswith("webpack.config.js"), c)
+            self.assertFalse(hd.BUILD_CMD.search(c), c)
+        for c in ["pytest -q", "npm run test:unit", "go test ./...", "python -m pytest tests/"]:
+            self.assertTrue(hd.TEST_CMD.search(c), c)
 
     def test_strings_are_not_skips(self):
         self.assertFalse(hd.SKIP_RE.search(hd._code_only('x = "@pytest.mark.skip"')))
