@@ -11,3 +11,6 @@
   `TODO`/`breakpoint()` inside string literals are no longer flagged; `cat pytest.ini` or
   `cat webpack.config.js` no longer counts as a test/build run; `check --base <bad-rev>`
   prints a clean error (exit 2) instead of a traceback.
+- Claims are judged per clause, so "Ran pytest: all 12 tests pass" is checked (the word
+  "ran" no longer hides it); "maybe", "probably", "likely" count as hedges. Stop diffs the
+  snapshot index directly, one git call fewer (median 659 ms, was about 950 ms on the same machine).

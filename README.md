@@ -97,8 +97,10 @@ Incomplete turns caught : 18 / 18
 Missed                  : 0
 False positives         : 0 / 16 complete turns
 LLM calls / extra tokens: 0 / 0 (the hook imports no network module)
-Stop hook time          : median 625 ms, max 790 ms (includes Python start-up and git)
+Stop hook time          : median 659 ms, max 898 ms (includes Python start-up and git)
 ```
+
+Timing is from a Windows laptop, where each git process costs about 100 ms. Across three back-to-back runs the median was 659–836 ms. Expect less on macOS and Linux.
 
 **Honest note.** I wrote these fixtures, so 18/18 says the checks do what they claim, not that they catch everything. The more important number is the false-positive rate on code I did *not* write. [`bench/real_history.py`](bench/real_history.py) replays the last 40 commits of real repositories as if each were one Claude turn (diff checks only, no transcript):
 

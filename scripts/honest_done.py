@@ -171,7 +171,7 @@ def save_state(path, state):
 MAX_UNTRACKED_BYTES = 2 * 1024 * 1024   # bigger untracked files are data, not code: not hashed
 
 
-def worktree_tree(root, index_path=None, excludes=None):
+def worktree_tree(root, index_path=None, excludes=None, diff_base=None):
     """Hash the whole working tree (tracked + untracked, .gitignore respected) into a
     git tree object without touching the user's index.
 
@@ -202,6 +202,9 @@ def worktree_tree(root, index_path=None, excludes=None):
                     pass
         spec = ["."] + [":(exclude,literal)" + p for p in excludes]
         git(root, "add", "-A", "--ignore-errors", "--", *spec, env=env, check=False)
+        if diff_base:   # Stop: diff the staged snapshot directly, no tree object needed (one git call saved)
+            return git(root, "-c", "core.quotepath=off", "diff", "--cached", "--no-color", "--no-ext-diff",
+                       "-U0", "-M", diff_base, env=env), excludes
         return git(root, "write-tree", env=env).strip(), excludes
     finally:
         if not persistent:
@@ -260,11 +263,7 @@ def parse_diff(text):
 
 
 def turn_diff(root, base_tree, index_path=None, excludes=None):
-    cur, _ = worktree_tree(root, index_path, excludes)
-    if cur == base_tree:
-        return []
-    out = git(root, "-c", "core.quotepath=off", "diff", "--no-color", "--no-ext-diff",
-              "-U0", "-M", base_tree, cur)
+    out, _ = worktree_tree(root, index_path, excludes, diff_base=base_tree)
     return parse_diff(out)
 
 
@@ -605,7 +604,7 @@ BUILD_CMD = re.compile(
     r"|mvnw?\b[^|;&]*\b(?:package|install|compile|verify)|gradlew?\b[^|;&]*\b(?:build|assemble)|dotnet\s+build"
     r"|python\s+-m\s+(?:build|compileall|py_compile)|vite\s+build|next\s+build|webpack|cmake\s+--build|swift\s+build|ninja))(?![\w.-])", re.I)
 
-NEGATION = re.compile(r"\b(?:not|n't|never|no|unable|cannot|could ?n.t|without|unverified|untested|should|would|will|may|might|"
+NEGATION = re.compile(r"\b(?:not|n't|never|no|unable|cannot|could ?n.t|without|unverified|untested|should|would|will|may|might|maybe|probably|likely|presumably|hopefully|"
                       r"expect|once|if|until|after you|please run|to run|you can|before|check|ensure|make sure|verify|run)\b", re.I)
 CLAIM_TESTS = re.compile(
     r"\b(?:all\s+|the\s+|\d+\s+|both\s+|every\s+)*(?:unit\s+|integration\s+|e2e\s+)?(?:tests?|specs?|test\s+suite|suite)"
@@ -624,7 +623,9 @@ FAILURE_ADMITTED = re.compile(r"\b(?:still|now)\s+(?:fail(?:s|ing)?|broken|red)\
 
 def _sentences(text):
     text = re.sub(r"```.*?```", " ", text, flags=re.S)
-    return [s for s in re.split(r"(?<=[.!?])\s+|\n+", text) if s.strip()]
+    # Clauses, not just sentences: in "Ran pytest: all 12 tests pass" the hedge-word "ran/run"
+    # belongs to the first clause and must not cancel the claim in the second.
+    return [s for s in re.split(r"(?<=[.!?:;])\s+|\s+(?:—|--)\s+|\n+", text) if s.strip()]
 
 
 def _claimed(text, pattern):

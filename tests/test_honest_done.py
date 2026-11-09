@@ -198,10 +198,12 @@ class Unit(unittest.TestCase):
         return hd.check_claims({"turn": t, "cfg": cfg, "files": [], "root": "."})
 
     def test_claims_and_hedges(self):
-        for s in ["All tests pass.", "The 12 tests now pass!", "Tests are green.", "The build succeeds."]:
+        for s in ["All tests pass.", "The 12 tests now pass!", "Tests are green.", "The build succeeds.",
+                  "Run pytest: all 12 tests pass.", "I ran pytest; all tests pass.", "Fixed it -- the tests pass now."]:
             self.assertTrue(self.claim(s), s)
         for s in ["I did not run the tests.", "Tests should pass once you run them.", "The tests don't pass yet.",
-                  "test_x now fails, so the suite is not green.", "Run `pytest` to check the tests pass."]:
+                  "test_x now fails, so the suite is not green.", "Run `pytest` to check the tests pass.",
+                  "Please run pytest: the tests should pass.", "I did not run them; tests pass on CI maybe."]:
             self.assertFalse(self.claim(s), s)
 
     def test_reading_a_config_file_is_not_a_test_run(self):
