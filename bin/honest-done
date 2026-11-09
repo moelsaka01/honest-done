@@ -1,0 +1,11 @@
+#!/bin/sh
+# Launcher: finds a Python 3.8+ (python3, python or py) and runs honest_done.py.
+# If none is found it exits 0, so a missing Python never blocks a session.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+script="$here/../scripts/honest_done.py"
+for py in python3 python py; do
+  if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; sys.exit(sys.version_info < (3, 8))' >/dev/null 2>&1; then
+    exec "$py" "$script" "$@"
+  fi
+done
+exit 0

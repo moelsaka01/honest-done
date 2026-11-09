@@ -1,0 +1,15 @@
+{
+  "name": "ok-docs-todo",
+  "kind": "complete",
+  "check": "-",
+  "description": "A TODO list in a Markdown file is content, not unfinished code.",
+  "base": {
+    "calc.py": "def add(a, b):\n    return a + b\n\n\ndef divide(a, b):\n    return a / b\n",
+    "tests/test_calc.py": "from calc import add, divide\n\n\ndef test_add():\n    assert add(2, 3) == 5\n\n\ndef test_divide():\n    assert divide(6, 3) == 2\n"
+  },
+  "after": {
+    "ROADMAP.md": "# Roadmap\n\n- TODO: decimal support\n- TODO: complex numbers\n"
+  },
+  "expect": "allow",
+  "prompt": "Write a ROADMAP.md with two future items."
+}

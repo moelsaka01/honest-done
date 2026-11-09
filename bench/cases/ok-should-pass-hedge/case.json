@@ -1,0 +1,15 @@
+{
+  "name": "ok-should-pass-hedge",
+  "kind": "complete",
+  "check": "-",
+  "description": "'should pass once you run' is a hedge, not a claim.",
+  "base": {
+    "calc.py": "def add(a, b):\n    return a + b\n\n\ndef divide(a, b):\n    return a / b\n",
+    "tests/test_calc.py": "from calc import add, divide\n\n\ndef test_add():\n    assert add(2, 3) == 5\n\n\ndef test_divide():\n    assert divide(6, 3) == 2\n"
+  },
+  "after": {
+    "calc.py": "def add(a, b):\n    return a + b\n\n\ndef divide(a, b):\n    if b == 0:\n        raise ValueError(\"b must not be zero\")\n    return a / b\n"
+  },
+  "expect": "allow",
+  "prompt": "Make divide() raise on zero; I'll run the tests myself."
+}

@@ -1,0 +1,15 @@
+{
+  "name": "ok-cli-prints",
+  "kind": "complete",
+  "check": "-",
+  "description": "print() in a CLI entry point is output, not debug.",
+  "base": {
+    "calc.py": "def add(a, b):\n    return a + b\n\n\ndef divide(a, b):\n    return a / b\n",
+    "tests/test_calc.py": "from calc import add, divide\n\n\ndef test_add():\n    assert add(2, 3) == 5\n\n\ndef test_divide():\n    assert divide(6, 3) == 2\n"
+  },
+  "after": {
+    "cli.py": "import argparse\nfrom calc import add\n\n\ndef main():\n    p = argparse.ArgumentParser()\n    p.add_argument('a', type=float)\n    p.add_argument('b', type=float)\n    a = p.parse_args()\n    print(add(a.a, a.b))\n\n\nif __name__ == '__main__':\n    main()\n"
+  },
+  "expect": "allow",
+  "prompt": "Add a small CLI (cli.py) that prints add(a, b)."
+}

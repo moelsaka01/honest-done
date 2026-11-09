@@ -1,0 +1,15 @@
+{
+  "name": "ok-list-all-done",
+  "kind": "complete",
+  "check": "-",
+  "description": "Three-item list, every item visibly handled.",
+  "base": {
+    "calc.py": "def add(a, b):\n    return a + b\n\n\ndef divide(a, b):\n    return a / b\n",
+    "tests/test_calc.py": "from calc import add, divide\n\n\ndef test_add():\n    assert add(2, 3) == 5\n\n\ndef test_divide():\n    assert divide(6, 3) == 2\n"
+  },
+  "after": {
+    "calc.py": "def add(a, b):\n    return a + b\n\n\ndef divide(a, b):\n    return a / b\n\n\ndef subtract(a, b):\n    return a - b\n\n\ndef multiply(a, b):\n    return a * b\n\n\ndef modulo(a, b):\n    return a % b\n"
+  },
+  "expect": "allow",
+  "prompt": "Please add to calc.py:\n1. a `subtract` function\n2. a `modulo` function\n3. a `multiply` function\n"
+}

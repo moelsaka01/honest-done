@@ -1,0 +1,17 @@
+{
+  "name": "ok-js-feature-and-tests",
+  "kind": "complete",
+  "check": "-",
+  "description": "JS feature with test, npm test run, noop arrow callback (not an empty function).",
+  "base": {
+    "package.json": "{\"name\": \"shop\", \"type\": \"module\", \"scripts\": {\"test\": \"node --test\", \"build\": \"tsc -p .\"}}\n",
+    "src/cart.js": "export function total(items) {\n  return items.reduce((s, i) => s + i.price * i.qty, 0);\n}\n",
+    "test/cart.test.js": "import { total } from \"../src/cart.js\";\nimport { test } from \"node:test\";\nimport assert from \"node:assert/strict\";\n\ntest(\"total\", () => {\n  assert.equal(total([{ price: 2, qty: 3 }]), 6);\n});\n"
+  },
+  "after": {
+    "src/cart.js": "export function total(items, onEmpty = () => {}) {\n  if (!items || items.length === 0) {\n    onEmpty();\n    return 0;\n  }\n  return items.reduce((s, i) => s + i.price * i.qty, 0);\n}\n",
+    "test/cart.test.js": "import { total } from \"../src/cart.js\";\nimport { test } from \"node:test\";\nimport assert from \"node:assert/strict\";\n\ntest(\"total\", () => {\n  assert.equal(total([{ price: 2, qty: 3 }]), 6);\n});\n\ntest(\"empty\", () => {\n  assert.equal(total([]), 0);\n  assert.equal(total(null), 0);\n});\n"
+  },
+  "expect": "allow",
+  "prompt": "Handle empty or null carts in src/cart.js and add a test."
+}

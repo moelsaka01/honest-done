@@ -1,0 +1,14 @@
+{
+  "name": "ok-moved-todo",
+  "kind": "complete",
+  "check": "-",
+  "description": "An existing TODO moved with its function: not new unfinished work.",
+  "base": {
+    "calc.py": "def add(a, b):\n    return a + b\n\n\ndef divide(a, b):\n    # TODO: decimal support\n    return a / b\n"
+  },
+  "after": {
+    "calc.py": "def divide(a, b):\n    # TODO: decimal support\n    return a / b\n\n\ndef add(a, b):\n    return a + b\n"
+  },
+  "expect": "allow",
+  "prompt": "Reorder calc.py so divide comes first."
+}

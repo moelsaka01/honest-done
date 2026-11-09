@@ -1,0 +1,15 @@
+{
+  "name": "ok-refactor-tests",
+  "kind": "complete",
+  "check": "-",
+  "description": "Test refactor that moves assertions into a parametrized test (no net loss).",
+  "base": {
+    "calc.py": "def add(a, b):\n    return a + b\n\n\ndef divide(a, b):\n    return a / b\n",
+    "tests/test_calc.py": "from calc import add, divide\n\n\ndef test_add():\n    assert add(2, 3) == 5\n\n\ndef test_divide():\n    assert divide(6, 3) == 2\n"
+  },
+  "after": {
+    "tests/test_calc.py": "import pytest\nfrom calc import add, divide\n\n\n@pytest.mark.parametrize('a,b,want', [(2, 3, 5), (0, 0, 0)])\ndef test_add(a, b, want):\n    assert add(a, b) == want\n\n\ndef test_divide():\n    assert divide(6, 3) == 2\n"
+  },
+  "expect": "allow",
+  "prompt": "Parametrize test_add in tests/test_calc.py."
+}

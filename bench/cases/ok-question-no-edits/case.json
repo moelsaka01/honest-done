@@ -1,0 +1,13 @@
+{
+  "name": "ok-question-no-edits",
+  "kind": "complete",
+  "check": "-",
+  "description": "A pure question: no edits, no claims to check.",
+  "base": {
+    "calc.py": "def add(a, b):\n    return a + b\n\n\ndef divide(a, b):\n    return a / b\n",
+    "tests/test_calc.py": "from calc import add, divide\n\n\ndef test_add():\n    assert add(2, 3) == 5\n\n\ndef test_divide():\n    assert divide(6, 3) == 2\n"
+  },
+  "after": {},
+  "expect": "allow",
+  "prompt": "What does divide() in calc.py return for 6 and 3?"
+}

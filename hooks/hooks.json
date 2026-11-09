@@ -1,0 +1,11 @@
+{
+  "description": "honest-done: snapshot the working tree on each prompt, check the turn on Stop",
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/bin/honest-done\" hook prompt", "timeout": 30 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/bin/honest-done\" hook stop", "timeout": 30 } ] }
+    ]
+  }
+}

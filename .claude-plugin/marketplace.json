@@ -1,0 +1,16 @@
+{
+  "name": "honest-done",
+  "owner": {
+    "name": "Mohamed Elsaka"
+  },
+  "metadata": {
+    "description": "A zero-token Stop hook that stops Claude Code from declaring unfinished work done."
+  },
+  "plugins": [
+    {
+      "name": "honest-done",
+      "source": "./",
+      "description": "Deterministic checks (no LLM calls) that block 'All done!' when the diff or transcript shows unfinished work."
+    }
+  ]
+}

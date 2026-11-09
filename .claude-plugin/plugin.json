@@ -1,0 +1,8 @@
+{
+  "name": "honest-done",
+  "version": "0.1.0",
+  "description": "A zero-token Stop hook that blocks Claude Code from ending a turn when it finds concrete evidence of unfinished work: TODOs and stubs, unverified 'tests pass' claims, deleted or skipped tests, unread files, skipped list items, leftover debug.",
+  "author": { "name": "Mohamed Elsaka" },
+  "license": "MIT",
+  "keywords": ["hooks", "stop-hook", "verification", "ai-agents", "claude-code", "code-quality"]
+}

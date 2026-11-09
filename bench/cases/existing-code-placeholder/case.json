@@ -1,0 +1,16 @@
+{
+  "name": "existing-code-placeholder",
+  "kind": "incomplete",
+  "check": "unfinished_code",
+  "description": "Rewrote a file and left '// ... rest of the code' where code used to be.",
+  "base": {
+    "package.json": "{\"name\": \"shop\", \"type\": \"module\", \"scripts\": {\"test\": \"node --test\", \"build\": \"tsc -p .\"}}\n",
+    "src/cart.js": "export function total(items) {\n  return items.reduce((s, i) => s + i.price * i.qty, 0);\n}\n",
+    "test/cart.test.js": "import { total } from \"../src/cart.js\";\nimport { test } from \"node:test\";\nimport assert from \"node:assert/strict\";\n\ntest(\"total\", () => {\n  assert.equal(total([{ price: 2, qty: 3 }]), 6);\n});\n"
+  },
+  "after": {
+    "src/cart.js": "export function total(items, coupon) {\n  // ... rest of the code unchanged\n}\n"
+  },
+  "expect": "block",
+  "prompt": "Add an optional coupon parameter to total() in src/cart.js."
+}

@@ -1,0 +1,15 @@
+{
+  "name": "pass-body-stub",
+  "kind": "incomplete",
+  "check": "unfinished_code",
+  "description": "New function whose body is just `pass`.",
+  "base": {
+    "auth.py": "import hashlib\n\n\ndef hash_password(pw, salt):\n    return hashlib.sha256((salt + pw).encode()).hexdigest()\n\n\ndef check_password(pw, salt, digest):\n    return hash_password(pw, salt) == digest\n",
+    "tests/test_auth.py": "from auth import hash_password, check_password\n\n\ndef test_roundtrip():\n    d = hash_password(\"pw\", \"s\")\n    assert check_password(\"pw\", \"s\", d)\n\n\ndef test_wrong_password():\n    d = hash_password(\"pw\", \"s\")\n    assert not check_password(\"nope\", \"s\", d)\n    assert d != hash_password(\"pw\", \"other\")\n"
+  },
+  "after": {
+    "auth.py": "import hashlib\n\n\ndef hash_password(pw, salt):\n    return hashlib.sha256((salt + pw).encode()).hexdigest()\n\n\ndef check_password(pw, salt, digest):\n    return hash_password(pw, salt) == digest\n\n\ndef reset_password(user, new_pw):\n    pass\n"
+  },
+  "expect": "block",
+  "prompt": "Add reset_password(user, new_pw) to auth.py."
+}
